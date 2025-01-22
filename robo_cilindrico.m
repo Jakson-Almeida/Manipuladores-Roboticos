@@ -24,60 +24,80 @@ Rx = [1 0          0           0
       0 cos(alpha) -sin(alpha) 0
       0 sin(alpha) cos(alpha)  0
       0 0          0           1];
+
 % Matriz de rotação em z
 Rz = [cos(theta) -sin(theta) 0 0
-      sin(theta) cos(theta) 0 0
-      0 0 1 0
-      0 0 0 1];
+      sin(theta) cos(theta)  0 0
+      0          0           1 0
+      0          0           0 1];
+
 % Matriz D-H:
 A = simplify(Tz * Rz * Tx * Rx);
 
-% Robô Planar 2DoF:
+% Robô Cilíndrico:
 
 % Tabela D-H:
 % |=====================================|
 % | Ai | d   | theta   | a    | alpha   |
 % |----|-----|---------|------|---------|
-% | 1  | 0   | th1*    | l1   | 0       |
-% | 2  | 0   | th2*    | l2   | 0       |
+% | 1  | L1  | th1*    | 0    | 0       |
+% | 2  | L2* | 90      | 0    | 90      |
+% | 3  | L3* | 0       | 0    | 0       |
 % |=====================================|
 
 % Variáveis simbólicas do robô em questão:
-syms th1 th2 l1 l2 real
+syms th1 l1 l2 l3 real
 
 % Frame {0}:
 F0 = eye(4);
 % Transformação D-H do frame {0} para o frame {1}:
 % Primeira transformação D-H
-A1 = subs(A , [d theta a alpha] , [0 th1 l1 0]);
+A1 = subs(A , [d theta a alpha] , [l1 th1 0 0]);
+
 % Frame {1}:
 F1 = simplify(F0 * A1); % ou, simplesmente, F1 = A1;
 % Transformação D-H do frame {1} para o frame {2}:
 % Segunda transformação D-H
-A2 = subs(A , [d theta a alpha] , [0 th2 l2 0]);
+A2 = subs(A , [d theta a alpha] , [l2 deg2rad(90) 0 deg2rad(90)]);
+
 % Frame {2}:
 F2 = simplify(F1 * A2); % ou, F2 = simplify(A1 * A2);
+
+% Frame {3}:
+A3 = subs(A , [d theta a alpha] , [l3 0 0 0]);
+F3 = simplify(F2 * A3);
 
 % ----
 % Plot
 % ----
+
 % Comprimento dos links (mude os valores para resultados diferentes)
 L1 = 2;
 L2 = 2;
+L3 = 2;
+
 % Ângulos das juntas (mude os valores para resultados diferentes)
-TH1 = deg2rad(30);
-TH2 = deg2rad(30);
+TH1 = deg2rad(90);
+
 % Frame {0} numérico
 f0 = F0;
+
 % Frame {1} numérico
 f1 = double(subs(F1 , [l1 th1] , [L1 TH1]));
+
 % Frame {2} numérico
-f2 = double(subs(F2 , [l1 l2 th1 th2] , [L1 L2 TH1 TH2]));
+f2 = double(subs(F2 , [l1 l2 l3 th1] , [L1 L2 L3 TH1]));
+
+% Frame {2} numérico
+f3 = double(subs(F3 , [l1 l2 l3 th1] , [L1 L2 L3 TH1]));
+
 % Ligação do frame {0} ao frame {1}
 plot3([f0(1,4) f1(1,4)] , [f0(2,4) f1(2,4)] , [f0(3,4) f1(3,4)] , 'y' , 'linewidth' , 4)
 axis equal; xlabel('x'); ylabel('y'); zlabel('z'); grid on; hold on;
 % Ligação do frame {1} ao frame {2}
 plot3([f1(1,4) f2(1,4)] , [f1(2,4) f2(2,4)] , [f1(3,4) f2(3,4)] , 'y' , 'linewidth' , 4)
+% Ligação do frame {2} ao frame {3}
+plot3([f2(1,4) f3(1,4)] , [f2(2,4) f3(2,4)] , [f2(3,4) f3(3,4)] , 'y' , 'linewidth' , 4)
 
 % FRAME {0}
 % Origem do frame {0}
@@ -117,6 +137,19 @@ text(f2(1,4)+f2(1,2) , f2(2,4)+f2(2,2) , f2(3,4)+f2(3,2) , 'y_{\{2\}}')
 % Eixo-z do frame {2}
 plot3([f2(1,4) f2(1,4)+f2(1,3)] , [f2(2,4) f2(2,4)+f2(2,3)] , [f2(3,4) f2(3,4)+f2(3,3)] , 'g' , 'linewidth' , 2)
 text(f2(1,4)+f2(1,3) , f2(2,4)+f2(2,3) , f2(3,4)+f2(3,3) , 'z_{\{2\}}')
+
+% FRAME {3}
+% Origem do frame {3}
+plot3(f3(1,4) , f3(2,4) , f3(3,4) , 'ok' , 'linewidth' , 2 , 'markersize' , 12)
+% Eixo-x do frame {3}
+plot3([f3(1,4) f3(1,4)+f3(1,1)] , [f3(2,4) f3(2,4)+f3(2,1)] , [f3(3,4) f3(3,4)+f3(3,1)] , 'b' , 'linewidth' , 2)
+text(f3(1,4)+f3(1,1) , f3(2,4)+f3(2,1) , f3(3,4)+f3(3,1) , 'x_{\{3\}}')
+% Eixo-y do frame {3}
+plot3([f3(1,4) f3(1,4)+f3(1,2)] , [f3(2,4) f3(2,4)+f3(2,2)] , [f3(3,4) f3(3,4)+f3(3,2)] , 'r' , 'linewidth' , 2)
+text(f3(1,4)+f3(1,2) , f3(2,4)+f3(2,2) , f3(3,4)+f3(3,2) , 'y_{\{3\}}')
+% Eixo-z do frame {3}
+plot3([f3(1,4) f3(1,4)+f3(1,3)] , [f3(2,4) f3(2,4)+f3(2,3)] , [f3(3,4) f3(3,4)+f3(3,3)] , 'g' , 'linewidth' , 2)
+text(f3(1,4)+f3(1,3) , f3(2,4)+f3(2,3) , f3(3,4)+f3(3,3) , 'z_{\{3\}}')
 hold off;
-title(sprintf('End-effector: x = %.2f, y = %.2f, z = %.2f' , f2(1,4) , f2(2,4) , f2(3,4)));
+title(sprintf('End-effector: x = %.2f, y = %.2f, z = %.2f' , f3(1,4) , f3(2,4) , f3(3,4)));
 drawnow;
