@@ -1,1 +1,3 @@
 # Manipuladores Robóticos
+
+- Cinemática inversa.
